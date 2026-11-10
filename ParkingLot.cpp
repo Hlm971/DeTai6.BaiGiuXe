@@ -30,7 +30,7 @@ SpotNode* ParkingLot::initializeLot() {
     SpotNode* tail = nullptr;
 
     for (int i = 0; i < rowCount; i++) {  // hang
-        for (int j = 1; j <= spotsPerRow; j++) { // vi tri
+        for (int j = 1; j <= spotsPerRow; j++) {  // vi tri
             SpotNode* node = new SpotNode;
             node->row = static_cast<char>('A' + i);
             node->number = j;
