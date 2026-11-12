@@ -1,130 +1,134 @@
-#define _CRT_SECURE_NO_WARNINGS 
-//máy tui thêm này mới chạy dc máy mn test có thể bỏ xem chạy dc k =)) 
 #include "PaymentService.h"
 #include "ParkingLot.h"
 #include "VehicleHashTable.h"
 
 #include <iostream>
-#include <iomanip>
+#include <string>
 #include <cmath>
-#include <ctime>
 
 using namespace std;
 
-PaymentService::PaymentService(
-    ParkingLot* lot,
-    VehicleHashTable* table
-) {
-    parkingLot = lot;
-    vehicleTable = table;
+static string formatTime(time_t t) {
+    char buf[32];
+#ifdef _WIN32
+    ctime_s(buf, sizeof(buf), &t);
+#else
+    ctime_r(&t, buf);
+#endif
+    string s(buf);
+    while (!s.empty() && (s.back() == '\n' || s.back() == '\r'))
+        s.pop_back();
+    return s;
 }
 
-// Tính thời gian gửi xe theo phút
-int PaymentService::calculateParkingMinutes(
-    time_t startTime,
-    time_t endTime
-) {
-    if (endTime < startTime) {
-        return -1;
-    }
+PaymentService::PaymentService(ParkingLot* lot, VehicleHashTable* table)
+    : parkingLot(lot), vehicleTable(table) {
+}
 
+// Tinh so phut gui xe (lam tron len). Tra ve -1 neu thoi gian ra < thoi gian vao
+int PaymentService::calculateParkingMinutes(time_t startTime, time_t endTime) {
     double seconds = difftime(endTime, startTime);
-
+    if (seconds < 0)
+        return -1;
     return static_cast<int>(ceil(seconds / 60.0));
 }
 
-// Tính phí theo số giờ bắt đầu
-long long PaymentService::calculateFee(
-    int minutes,
-    const string& vehicleType
-) {
-    if (minutes < 0) {
-        return -1;
-    }
-
-    if (minutes == 0) {
+// Phi = so phut * gia/gio / 60 (lam tron len). Duoi 3 phut (0.05 gio) mien phi
+long long PaymentService::calculateFee(int minutes, const string& vehicleType) {
+    if (minutes <= 3)
         return 0;
-    }
 
-    long long rate;
-
-    if (vehicleType == "motorbike") {
-        rate = MOTORBIKE_RATE;
-    }
-    else if (vehicleType == "car") {
-        rate = CAR_RATE;
-    }
-    else {
-        return -1;
-    }
-
-    int hours = (minutes + 59) / 60;
-
-    return static_cast<long long>(hours) * rate;
+    long long rate = (vehicleType == "car") ? CAR_RATE : MOTORBIKE_RATE;
+    return (static_cast<long long>(minutes) * rate + 59) / 60;
 }
 
-// Hàm tính tiền công khai
-long long PaymentService::calculatePayment(
-    time_t startTime,
+long long PaymentService::calculatePayment(time_t startTime,
     time_t endTime,
-    const string& vehicleType
-) {
+    const string& vehicleType) {
     int minutes = calculateParkingMinutes(startTime, endTime);
-
-    if (minutes < 0) {
+    if (minutes < 0)
         return -1;
-    }
-
     return calculateFee(minutes, vehicleType);
 }
 
-// In hóa đơn
-void PaymentService::printReceipt(
-    const string& licensePlate,
+// In hoa don
+void PaymentService::printReceipt(const string& licensePlate,
     time_t startTime,
     time_t endTime,
     int minutes,
-    long long fee
-) {
-    cout << "\n========== HOA DON GUI XE ==========\n";
+    long long fee) {
+    VehicleRecord* record = vehicleTable->findVehicle(licensePlate);
 
-    cout << "Bien so xe: " << licensePlate << endl;
+    cout << "\n================ HOA DON THANH TOAN & TRA XE ================\n";
+    cout << "Bien so xe       : " << normalizeLicensePlate(licensePlate) << endl;
 
-    cout << "Thoi gian gui: "
-        << ctime(&startTime);
+    if (record != nullptr) {
+        cout << "Loai xe          : "
+            << (record->vehicleType == "car" ? "O to" : "Xe may") << endl;
 
-    cout << "Thoi gian tra: "
-        << ctime(&endTime);
+        if (record->spot != nullptr)
+            cout << "Vi tri do        : " << record->spot->row
+            << record->spot->number << endl;
+        else
+            cout << "Vi tri do        : Chua gan vi tri\n";
+    }
 
-    cout << "Tong thoi gian: "
-        << minutes << " phut\n";
-
-    cout << "Tong tien: "
-        << fixed << fee << " VND\n";
-
-    cout << "====================================\n";
+    cout << "Thoi gian vao    : " << formatTime(startTime) << endl;
+    cout << "Thoi gian ra     : " << formatTime(endTime) << endl;
+    cout << "Tong thoi gian   : " << minutes / 60 << " gio "
+        << minutes % 60 << " phut\n";
+    cout << "So tien thanh toan: " << fee << " VND\n";
+    cout << "=============================================================\n";
 }
 
-// Thực hiện trả xe
-void PaymentService::returnVehicle(
-    const string& licensePlate
-) {
-    /*
-       Phần này cần kết nối với cấu trúc thực tế
-       của VehicleHashTable và ParkingLot.
+// Thuc hien tra xe: tim xe -> tinh tien -> in hoa don -> xac nhan
+// -> giai phong cho do -> xoa ho so xe
+void PaymentService::returnVehicle(const string& licensePlate) {
+    // 1. Tim xe bang bien so
+    VehicleRecord* record = vehicleTable->findVehicle(licensePlate);
+    if (record == nullptr) {
+        cout << "\n[Loi] Khong tim thay xe co bien so: "
+            << licensePlate << " trong bai xe!\n";
+        return;
+    }
 
-       Cần thực hiện:
-       1. Tìm xe bằng biển số.
-       2. Lấy thời gian gửi và loại xe.
-       3. Tính tiền.
-       4. In hóa đơn.
-       5. Giải phóng vị trí đỗ.
-       6. Xóa hồ sơ xe.
-    */
+    // 2. Lay thoi gian gui va loai xe
+    time_t startTime = record->entryTime;
+    time_t endTime = time(nullptr);
+    string vehicleType = record->vehicleType;
 
-    cout << "Chuc nang tra xe: "
-        << licensePlate << endl;
+    int minutes = calculateParkingMinutes(startTime, endTime);
+    if (minutes < 0) {
+        cout << "\n[Loi] Thoi gian tra xe som hon thoi gian vao bai. "
+            << "Vui long kiem tra lai!\n";
+        return;
+    }
 
-    cout << "Can ket noi voi cac ham cua "
-        << "VehicleHashTable va ParkingLot.\n";
+    // 3. Tinh tien
+    long long fee = calculateFee(minutes, vehicleType);
+
+    // 4. In hoa don
+    printReceipt(licensePlate, startTime, endTime, minutes, fee);
+
+    // Xac nhan thanh toan
+    char confirm;
+    cout << "Xac nhan thanh toan va hoan tat tra xe? (y/n): ";
+    cin >> confirm;
+
+    if (confirm != 'y' && confirm != 'Y') {
+        cout << "[Huy] Giao dich da bi huy. Xe van giu nguyen trong bai.\n";
+        return;
+    }
+
+    // 5. Giai phong vi tri do (phai lam truoc khi xoa ho so vi can record->spot)
+    if (record->spot != nullptr && parkingLot != nullptr) {
+        if (!parkingLot->releaseSpot(record->spot))
+            cout << "[Canh bao] Khong the giai phong vi tri do!\n";
+    }
+
+    // 6. Xoa ho so xe khoi bang bam (record bi delete sau dong nay)
+    vehicleTable->removeVehicle(licensePlate);
+
+    cout << "[Thanh cong] Giao dich hoan tat. Cho do da duoc giai phong, "
+        << "xe da roi khoi bai!\n";
 }
