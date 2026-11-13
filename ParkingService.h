@@ -2,22 +2,37 @@
 #define PARKING_SERVICE_H
 
 #include <string>
-#include "VehicleHashTable.h"
+#include <ctime>
 #include "ParkingLot.h"
+#include "VehicleHashTable.h"
 
-using namespace std;
-
-class ParkingService {
-private:
-    VehicleHashTable* hashTable;
-    ParkingLot* parkingLot;
-
-public:
-    // Hàm khởi tạo nhận vào con trỏ quản lý Hash Table và Bãi xe
-    ParkingService(VehicleHashTable* ht, ParkingLot* pl);
-
-    // Hàm thực hiện nghiệp vụ gửi xe
-    bool parkVehicle(string licensePlate, string vehicleType);
+// Định nghĩa trạng thái gửi xe theo đặc tả của nhóm
+enum class ParkStatus {
+    SUCCESS,
+    INVALID_PLATE,
+    DUPLICATE_PLATE,
+    LOT_FULL,
+    INTERNAL_ERROR
 };
 
-#endif
+class ParkingService {
+public:
+    /**
+     * Xử lý nghiệp vụ gửi xe vào bãi.
+     * @param lot Tham chiếu đến đối tượng quản lý bãi đỗ xe.
+     * @param table Tham chiếu đến bảng băm quản lý xe.
+     * @param plate Biển số xe đầu vào.
+     * @param entryTime Thời điểm gửi xe.
+     * @param message Biến tham chiếu để lưu thông báo kết quả trả ra.
+     * @return ParkStatus Trạng thái kết quả thực hiện.
+     */
+    static ParkStatus parkVehicle(
+        ParkingLot& lot,
+        VehicleHashTable& table,
+        const std::string& plate,
+        std::time_t entryTime,
+        std::string& message
+    );
+};
+
+#endif // PARKING_SERVICE_H
