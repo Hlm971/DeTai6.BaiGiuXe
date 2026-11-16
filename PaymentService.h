@@ -1,45 +1,76 @@
-
 #ifndef PAYMENT_SERVICE_H
 #define PAYMENT_SERVICE_H
 
-#include <string>
 #include <ctime>
-
-using namespace std;
+#include <string>
 
 class ParkingLot;
 class VehicleHashTable;
 
-class PaymentService {
-private:
-    ParkingLot* parkingLot;
-    VehicleHashTable* vehicleTable;
+// Visual Studio coi localtime la "unsafe" (C4996) -> tat canh bao cho cac file
+// co include header nay (vd: Menu.cpp).
+#if defined(_MSC_VER)
+#pragma warning(disable : 4996)
+#endif
 
-    const long long MOTORBIKE_RATE = 5000;
-    const long long CAR_RATE = 20000;
+// ---------------------------------------------------------------------------
+// Bieu phi: tinh theo gio bat dau (gui qua 1 phut cua gio nao cung tinh tron gio do)
+// ---------------------------------------------------------------------------
+constexpr long long kFeePerStartedHourVND = 5000;
 
-    long long calculateFee(int minutes, const string& vehicleType);
-
-public:
-    PaymentService(ParkingLot* lot, VehicleHashTable* table);
-
-    // Tính số phút gửi xe
-    int calculateParkingMinutes(time_t startTime, time_t endTime);
-
-    // Tính tiền gửi xe
-    long long calculatePayment(time_t startTime,
-        time_t endTime,
-        const string& vehicleType);
-
-    // Thực hiện trả xe
-    void returnVehicle(const string& licensePlate);
-
-    // In hóa đơn
-    void printReceipt(const string& licensePlate,
-        time_t startTime,
-        time_t endTime,
-        int minutes,
-        long long fee);
+// ---------------------------------------------------------------------------
+// Trang thai tra xe
+// ---------------------------------------------------------------------------
+enum class ReturnStatus {
+    SUCCESS,            // Tra xe thanh cong
+    INVALID_PLATE,      // Bien so rong / khong hop le
+    VEHICLE_NOT_FOUND,  // Khong co xe nay trong bai
+    INVALID_EXIT_TIME,  // Gio ra <= gio vao
+    INCONSISTENT_DATA,  // Ho so xe va cho do khong khop
+    INTERNAL_ERROR      // Loi he thong
 };
 
-#endif
+// ---------------------------------------------------------------------------
+// Hoa don
+// ---------------------------------------------------------------------------
+struct PaymentReceipt {
+    std::string licensePlate;    // Bien so da chuan hoa
+    char row = '\0';             // Hang cua cho do (A - Z)
+    int spotNumber = 0;          // So cho do trong hang
+    std::time_t entryTime = 0;   // Thoi diem gui
+    std::time_t exitTime = 0;    // Thoi diem tra
+    long long billedHours = 0;   // So gio tinh phi (gio bat dau)
+    long long totalFeeVND = 0;   // Tong tien phai tra
+};
+
+// ---------------------------------------------------------------------------
+// Cach tinh phi
+//   billedHours = ceil((exitTime - entryTime) / 3600)
+//   fee         = billedHours * kFeePerStartedHourVND
+// Tra ve false (va khong thay doi hours, fee) neu exitTime <= entryTime.
+// ---------------------------------------------------------------------------
+bool calculateFee(std::time_t entryTime,
+    std::time_t exitTime,
+    long long& billedHours,
+    long long& fee);
+
+// ---------------------------------------------------------------------------
+// Nghiep vu tra xe:
+//   1. Chuan hoa + kiem tra bien so
+//   2. Tim ho so xe trong bang bam
+//   3. Kiem tra ho so va cho do khop nhau
+//   4. Tinh phi
+//   5. Giai phong cho do
+//   6. Xoa ho so xe khoi bang bam
+//   7. Ghi hoa don
+// Neu that bai o bat ky buoc nao: xe van o trong bai, receipt khong bi thay doi.
+// Ham khong doc/ghi console; Menu chiu trach nhiem hien thi.
+// ---------------------------------------------------------------------------
+ReturnStatus returnVehicle(ParkingLot& lot,
+    VehicleHashTable& table,
+    const std::string& licensePlate,
+    std::time_t exitTime,
+    PaymentReceipt& receipt,
+    std::string& message);
+
+#endif // PAYMENT_SERVICE_H
