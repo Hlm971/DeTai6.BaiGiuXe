@@ -5,9 +5,8 @@
 
 #include <string>
 
-// ---------------------------------------------------------------------------
 // Cach tinh phi
-// ---------------------------------------------------------------------------
+
 
 bool calculateFee(std::time_t entryTime,
     std::time_t exitTime,
@@ -26,9 +25,9 @@ bool calculateFee(std::time_t entryTime,
     return true;
 }
 
-// ---------------------------------------------------------------------------
+
 // Nghiep vu tra xe
-// ---------------------------------------------------------------------------
+
 
 ReturnStatus returnVehicle(ParkingLot& lot,
     VehicleHashTable& table,
