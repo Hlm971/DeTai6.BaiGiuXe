@@ -22,8 +22,6 @@ ParkStatus ParkingService::parkVehicle(
     }
 
     // 2. Kiểm tra xe đã có trong bãi (bảng băm) chưa
-    // Lưu ý: findVehicle trả về VehicleRecord (hoặc con trỏ tùy cấu trúc, ở đây so sánh với nullptr nếu trả về con trỏ)
-    // Nếu nhóm định nghĩa findVehicle trả về con trỏ VehicleRecord*:
     if (table.findVehicle(normalizedPlate) != nullptr) {
         message = "Gui xe that bai: Xe co bien so " + normalizedPlate + " da ton tai trong bai!";
         return ParkStatus::DUPLICATE_PLATE;
@@ -34,7 +32,7 @@ ParkStatus ParkingService::parkVehicle(
         message = "Gui xe that bai: Bai giu xe da day!";
         return ParkStatus::LOT_FULL;
     }
-    s
+
     // 4. Tìm vị trí trống đầu tiên trong bãi xe
     SpotNode* freeSpot = lot.findFirstFreeSpot();
     if (freeSpot == nullptr) {

@@ -33,6 +33,7 @@ public:
         std::time_t entryTime,
         std::string& message
     );
+
 };
 
 #endif // PARKING_SERVICE_H
