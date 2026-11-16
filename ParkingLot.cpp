@@ -1,5 +1,5 @@
 #include "ParkingLot.h"
-#include <string>
+#include <new>
 using namespace std;
 
 // khoi tao bai xe rong gom rows hang, moi hang co spots vi tri
@@ -13,10 +13,10 @@ ParkingLot::ParkingLot(int rows, int spots) {
     head = nullptr;
     rowCount = rows;
     spotsPerRow = spots;
-    totalSpots = rowCount * spotsPerRow;
+    totalSpots = 0;
     occupiedCount = 0;
  
-    head = initializeLot();
+    initializeLot();
 }
 
 // huy danh sach va giai phong bo nho
@@ -26,29 +26,33 @@ ParkingLot::~ParkingLot() {
 
 // tao dslk theo thu tu A1, A2, ... Am, B1, B2, ... 
 SpotNode* ParkingLot::initializeLot() {
-    SpotNode* first = nullptr;
+    clear(); // bo danh sach cu neu co, tranh ro ri bo nho
+    
     SpotNode* tail = nullptr;
 
     for (int i = 0; i < rowCount; i++) {  // hang
-        for (int j = 1; j <= spotsPerRow; j++) {  // vi tri
-            SpotNode* node = new SpotNode;
+        for (int j = 1; j <= spotsPerRow; j++) { // vi tri
+            SpotNode* node = new(nothrow) SpotNode;
+            if (node == nullptr) { // het bo nho, don phan da tao
+                clear();
+                return nullptr;
+            }
             node->row = static_cast<char>('A' + i);
             node->number = j;
             node->occupied = false;
             node->licensePlate = "";
             node->next = nullptr;
 
-            if (first == nullptr) {
-                first = node;
-                tail = node;
-            }
-            else {
+            if (head == nullptr)
+                head = node;
+            else 
                 tail->next = node;
-                tail = node;
-            }
+            tail = node;
         }
     }
-    return first;
+    totalSpots = rowCount * spotsPerRow;
+    occupiedCount = 0;
+    return head;
 }
 
 // tim cho trong dau tien theo thu tu hang va vi tri
@@ -64,7 +68,9 @@ SpotNode* ParkingLot::findFirstFreeSpot() const {
 
 // danh dau cho da co xe
 bool ParkingLot::occupySpot(SpotNode* spot, const string& licensePlate) {
-    if (spot == nullptr || spot->occupied == true) 
+    if (spot == nullptr || spot->occupied) 
+        return false;
+    if (occupiedCount >= totalSpots) // bo dem khong the vuot tong so cho
         return false;
     spot->occupied = true;
     spot->licensePlate = licensePlate;
@@ -75,6 +81,8 @@ bool ParkingLot::occupySpot(SpotNode* spot, const string& licensePlate) {
 // giai phong cho dau
 bool ParkingLot::releaseSpot(SpotNode* spot) {
     if (spot == nullptr || !spot->occupied) 
+        return false;
+    if (occupiedCount <= 0) // bo dem khong the am
         return false;
     spot->occupied = false;
     spot->licensePlate = "";
@@ -102,13 +110,15 @@ int ParkingLot::getAvailableCount() const {
     return totalSpots - occupiedCount;
 }
 
-// xoa toan bo danh sach
+// xoa toan bo danh sach va dat lai cac bo dem
 void ParkingLot::clear() {
-    while (head != nullptr) {
-        SpotNode* temp = head;
-        head = head->next;
-        delete temp;
+    SpotNode* cur = head;
+    while (cur != nullptr) {
+        SpotNode* nextNode = cur->next;
+        delete cur;
+        cur = nextNode;
     }
+    head = nullptr;
     occupiedCount = 0;
     totalSpots = 0;
 }

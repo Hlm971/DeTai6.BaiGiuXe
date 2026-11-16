@@ -9,9 +9,9 @@
 #include "ParkingLot.h"
 #include "VehicleHashTable.h"
 #include "AvailabilityService.h"
+
 #include "ParkingService.h"
 #include "PaymentService.h"
-
 
 // ================= Mini framework =================
 struct Result { std::string group, name, expected, actual; bool pass; };
@@ -157,7 +157,6 @@ void testVehicleHashTable() {
 // ====================== ParkingService ======================
 void testParkingService() {
     g_group = "ParkingService";
-#ifdef HAS_PARKING_SERVICE
     ParkingLot lot(1, 2);                                    // 2 vi tri
     VehicleHashTable table;
     std::string msg;
@@ -190,15 +189,11 @@ void testParkingService() {
     CHECK("Bai day -> LOT_FULL",
           parkVehicle(lot, table, "30G99999", T0 + 180, msg) == ParkStatus::LOT_FULL);
     CHECK("Bai day: khong nhan them xe", lot.getOccupiedCount() == 2 && table.getSize() == 2);
-#else
-    std::cout << "[BO QUA] testParkingService: chua co ParkingService.h\n";
-#endif
 }
 
 // ====================== PaymentService ======================
 void testPaymentService() {
     g_group = "PaymentService";
-#if defined(HAS_PAYMENT_SERVICE) && defined(HAS_PARKING_SERVICE)
     long long hours = -1, fee = -1;
     CHECK("Tinh phi 3 gio tron = 3 x don gia",
           calculateFee(T0, T0 + 3 * 3600, hours, fee) && hours == 3 && fee == 3 * kFeePerStartedHourVND);
@@ -231,9 +226,6 @@ void testPaymentService() {
           returnVehicle(lot, table, "51F22222", T0, rc, msg) == ReturnStatus::INVALID_EXIT_TIME);
     CHECK("Loi thoi gian: xe van con trong bai",
           lot.getOccupiedCount() == 1 && table.findVehicle("51F22222") != nullptr);
-#else
-    std::cout << "[BO QUA] testPaymentService: chua co PaymentService.h\n";
-#endif
 }
 
 // ====================== AvailabilityService ======================
