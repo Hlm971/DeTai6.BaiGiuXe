@@ -122,4 +122,3 @@ void ParkingLot::clear() {
     occupiedCount = 0;
     totalSpots = 0;
 }
-
