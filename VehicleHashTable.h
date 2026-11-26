@@ -1,4 +1,3 @@
-
 #ifndef VEHICLEHASHTABLE_H
 #define VEHICLEHASHTABLE_H
 
