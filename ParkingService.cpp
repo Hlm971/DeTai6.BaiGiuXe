@@ -1,7 +1,7 @@
 #include "ParkingService.h"
 #include <algorithm>
 
-ParkStatus ParkingService::parkVehicle(
+ParkStatus parkVehicle(
     ParkingLot& lot,
     VehicleHashTable& table,
     const std::string& plate,
@@ -56,7 +56,7 @@ ParkStatus ParkingService::parkVehicle(
 
     // 7. Trả kết quả thành công kèm thông tin chi tiết qua message
     message = "Gui xe thanh cong cho bien so " + normalizedPlate +
-        " tai vi tri: Hang " + std::to_string(freeSpot->row) +
+        " tai vi tri: Hang " + std::string(1, freeSpot->row) +
         ", Cot " + std::to_string(freeSpot->number);
 
     return ParkStatus::SUCCESS;
