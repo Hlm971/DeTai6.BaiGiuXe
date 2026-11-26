@@ -1,4 +1,3 @@
-
 #include "VehicleHashTable.h"
 #include <cctype>
 
